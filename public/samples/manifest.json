@@ -1,0 +1,65 @@
+{
+  "dataset": "北岸新城供热可比性样例数据",
+  "version": "1.0",
+  "description": "用于验收探头断线、短时开窗、夜间停供、地址模糊投诉与补录工单等场景。",
+  "timezone": "Asia/Shanghai",
+  "heating_day_start_hour": 6,
+  "window": {
+    "start_day": "2026-01-05",
+    "end_day": "2026-01-18"
+  },
+  "samples": [
+    {
+      "file": "registry.json",
+      "kind": "registry",
+      "delivered_at": "2026-01-19T07:50:00+08:00",
+      "note": "楼栋与探头登记册"
+    },
+    {
+      "file": "weather_2026-01.csv",
+      "kind": "weather",
+      "delivered_at": "2026-01-19T08:40:00+08:00",
+      "note": "园区气象站 30 分钟观测"
+    },
+    {
+      "file": "readings_2026-01.csv",
+      "kind": "readings",
+      "delivered_at": "2026-01-19T09:05:00+08:00",
+      "note": "核心室温读数（含重复与坏行）"
+    },
+    {
+      "file": "work_orders_2026-01.json",
+      "kind": "work_orders",
+      "delivered_at": "2026-01-19T09:20:00+08:00",
+      "note": "准时工单，含 1 条未知楼栋"
+    },
+    {
+      "file": "complaints_2026-01.json",
+      "kind": "complaints",
+      "delivered_at": "2026-01-19T10:00:00+08:00",
+      "note": "热线投诉（模糊地址）"
+    },
+    {
+      "file": "work_orders_late_2026-01-21.csv",
+      "kind": "work_orders",
+      "delivered_at": "2026-01-21T15:30:00+08:00",
+      "note": "补录工单 · 运行截止后到达"
+    },
+    {
+      "file": "readings_late_2026-01-21.csv",
+      "kind": "readings",
+      "delivered_at": "2026-01-21T14:10:00+08:00",
+      "note": "迟到监测数据（1号楼 1/17 供热日）· 运行截止后到达"
+    }
+  ],
+  "expected_findings": {
+    "window_opening": "C-1001 仅 45 分钟单探头下降，应判为短时扰动而非停供证据。",
+    "documented_outage": "C-1002 有停供工单且双探头持续下降，应判为有据可查的供热不足。",
+    "local_fault": "C-1003 三探头中仅一个下降，且工单为阀门调整，应判为局部设备问题。",
+    "probe_dead": "7号楼唯一探头自 1/8 18:00 停止上传，应判为覆盖不足、无法判断，而不是无风险。",
+    "no_probe": "11号楼与2号楼无探头，应列入监测盲区；2号楼投诉无法核实。",
+    "ambiguous_address": "C-1006、C-1007 地址无法唯一归属，应保持未归属并给出候选。",
+    "misalignment": "C-1008 工单记录停供但读数正常，监测与工单无法可靠对齐。",
+    "late_data": "1/17 供热日 1号楼读数与补录工单在截止后到达，旧运行应提示覆盖截止且不局部刷新。"
+  }
+}

@@ -1,0 +1,2 @@
+work_order_id,building,type,start,end,summary,recorded_at
+WO-2005,北岸新城12号楼,supply_suspension,2026-01-15T23:30:00+08:00,2026-01-16T04:10:00+08:00,补录：12号楼夜间二次网失压停供,2026-01-22T09:15:00+08:00
