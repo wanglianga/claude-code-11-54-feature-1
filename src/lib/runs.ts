@@ -35,6 +35,7 @@ export function createAnalysisRun(input: StartRunInput): AnalysisRun {
   const result: RunResult = {
     ...input.result,
     generatedAt: input.now,
+    bias: input.result.bias ? { ...input.result.bias, generatedAt: input.now } : null,
     mappingUsed: {
       buildings: input.mapping.buildings.map((b) => ({ ...b })),
       probes: input.mapping.probes.map((p) => ({ ...p })),

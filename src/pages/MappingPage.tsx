@@ -1,12 +1,28 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, Building2, GitMerge, MapPin, Pencil, Plus, Radio, ShieldQuestion, Split, ArrowRight, History } from 'lucide-react';
+import { AlertTriangle, Building2, GitMerge, MapPin, Pencil, Plus, Radio, ShieldQuestion, Split, ArrowRight, History, ClipboardList } from 'lucide-react';
 import { store, useStore, useActiveMapping } from '../state/store';
-import type { AddressAssertion, ComplaintCandidate, MappingVersion, Probe } from '../types';
+import type {
+  AddressAssertion,
+  ComplaintCandidate,
+  MappingVersion,
+  NeighborLink,
+  Probe,
+  ProbeInstallPosition,
+  ProbeLifecycleEvent,
+  CalibrationCertificate,
+} from '../types';
 import { Callout, Chip, Empty, Modal, Panel, Stat } from '../components/ui/primitives';
 import { PageHead } from '../components/Layout';
 import { addressKey, candidateDifference, findAssertionConflicts } from '../lib/address';
 import { dateTime } from '../lib/format';
+import {
+  CALIBRATION_LABELS,
+  LIFECYCLE_LABELS,
+  ORIENTATION_LABELS,
+  ROOM_LABELS,
+  WALL_LABELS,
+} from '../lib/bias-labels';
 
 export function MappingPage() {
   const state = useStore();
@@ -268,6 +284,13 @@ function MappingEditor({
   onClose: () => void;
   onSave: () => void;
 }) {
+  const [dossierId, setDossierId] = useState<string | null>(null);
+  const updateProbe = (idx: number, patch: Partial<Probe>) => {
+    const next = [...draft.probes];
+    next[idx] = { ...next[idx], ...patch };
+    onChange({ ...draft, probes: next });
+  };
+  const probeIdx = draft.probes.findIndex((p) => p.id === dossierId);
   return (
     <Modal
       open={open}
@@ -361,7 +384,7 @@ function MappingEditor({
       <div style={{ maxHeight: 300, overflow: 'auto', border: '1px solid var(--line-soft)', borderRadius: 9 }}>
       <table className="table">
         <thead>
-          <tr><th>探头</th><th>标签</th><th>所属楼栋</th><th>间隔</th><th>位置说明</th></tr>
+          <tr><th>探头</th><th>标签</th><th>所属楼栋</th><th>间隔</th><th>位置说明</th><th>设备档案</th></tr>
         </thead>
         <tbody>
           {draft.probes.map((p, idx) => (
@@ -393,10 +416,184 @@ function MappingEditor({
                 next[idx] = { ...p, locationNote: e.target.value };
                 onChange({ ...draft, probes: next });
               }} /></td>
+              <td>
+                <button type="button" className="btn ghost sm" onClick={() => setDossierId(p.id)}>
+                  <ClipboardList size={12} /> 档案{(p.certificates?.length ?? 0) > 0 && ` · ${p.certificates!.length} 证`}
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
+      </div>
+      {probeIdx >= 0 && (
+        <ProbeDossierModal
+          probe={draft.probes[probeIdx]}
+          allProbes={draft.probes}
+          onClose={() => setDossierId(null)}
+          onChange={(patch) => updateProbe(probeIdx, patch)}
+        />
+      )}
+    </Modal>
+  );
+}
+
+const ORIENTATION_OPTIONS = Object.entries(ORIENTATION_LABELS);
+const WALL_OPTIONS = Object.entries(WALL_LABELS);
+const ROOM_OPTIONS = Object.entries(ROOM_LABELS);
+const LIFECYCLE_OPTIONS = Object.entries(LIFECYCLE_LABELS);
+
+function ProbeDossierModal({
+  probe,
+  allProbes,
+  onClose,
+  onChange,
+}: {
+  probe: Probe;
+  allProbes: Probe[];
+  onClose: () => void;
+  onChange: (patch: Partial<Probe>) => void;
+}) {
+  const pos = probe.position ?? null;
+  const updatePos = (patch: Partial<ProbeInstallPosition>) => {
+    const base: ProbeInstallPosition = pos ?? {
+      floor: null, heightM: null, orientation: 'unknown', wallPosition: 'unknown',
+      roomType: 'unknown', exposureNote: '', evidenceRef: '', evidenceSinceTs: null,
+    };
+    onChange({ position: { ...base, ...patch } });
+  };
+  const certs = probe.certificates ?? [];
+  const events = probe.lifecycleEvents ?? [];
+  const neighbors = probe.neighborLinks ?? [];
+  const addCert = () => onChange({
+    certificates: [...certs, {
+      id: `CAL-NEW-${certs.length + 1}`, lab: '', calibratedAt: Date.parse('2025-11-01T00:00:00+08:00'),
+      validUntil: null, biasAt20C: null, uncertaintyC: null, documentRef: '', statusNote: '',
+    }],
+  });
+  const addEvent = () => onChange({
+    lifecycleEvents: [...events, {
+      id: `EV-NEW-${events.length + 1}`, kind: 'replaced' as const, eventTs: Date.parse('2026-01-09T08:00:00+08:00'),
+      summary: '', documentRef: '',
+    }].sort((a, b) => a.eventTs - b.eventTs),
+  });
+  const addNeighbor = () => onChange({
+    neighborLinks: [...neighbors, { probeId: allProbes.find((p) => p.id !== probe.id)?.id ?? '', relation: 'same_building', floorDelta: null, note: '', evidenceRef: '' }],
+  });
+  const inputFor = (ts: number | null) => (ts === null ? '' : new Date(ts + 8 * 3600_000).toISOString().slice(0, 16));
+  return (
+    <Modal
+      open
+      wide
+      title={`设备档案 · ${probe.id}`}
+      sub="安装高度、朝向、房间类型、校准证书、更换/改造事件与邻近探头关系；保存随登记册生成新版本，历史运行不变。"
+      onClose={onClose}
+      footer={<button className="btn primary" onClick={onClose}>完成（随登记册一起保存）</button>}
+    >
+      <h4 className="tiny-2" style={{ letterSpacing: '0.08em', textTransform: 'uppercase' }}>安装位置（无证据编号的档案不会通过偏差门控）</h4>
+      <div className="grid c4">
+        <label className="field tiny-2">楼层
+          <input type="number" value={pos?.floor ?? ''} onChange={(e) => updatePos({ floor: e.target.value === '' ? null : Number(e.target.value) })} />
+        </label>
+        <label className="field tiny-2">安装高度 m
+          <input type="number" step="0.1" value={pos?.heightM ?? ''} onChange={(e) => updatePos({ heightM: e.target.value === '' ? null : Number(e.target.value) })} />
+        </label>
+        <label className="field tiny-2">朝向
+          <select value={pos?.orientation ?? 'unknown'} onChange={(e) => updatePos({ orientation: e.target.value as ProbeInstallPosition['orientation'] })}>
+            {ORIENTATION_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </label>
+        <label className="field tiny-2">墙体
+          <select value={pos?.wallPosition ?? 'unknown'} onChange={(e) => updatePos({ wallPosition: e.target.value as ProbeInstallPosition['wallPosition'] })}>
+            {WALL_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </label>
+        <label className="field tiny-2">房间类型
+          <select value={pos?.roomType ?? 'unknown'} onChange={(e) => updatePos({ roomType: e.target.value as ProbeInstallPosition['roomType'] })}>
+            {ROOM_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </label>
+        <label className="field tiny-2">位置证据编号
+          <input type="text" value={pos?.evidenceRef ?? ''} placeholder="如 INST-301 / 现场照片编号" onChange={(e) => updatePos({ evidenceRef: e.target.value })} />
+        </label>
+        <label className="field tiny-2" style={{ gridColumn: 'span 2' }}>外露/冷桥说明
+          <input type="text" value={pos?.exposureNote ?? ''} onChange={(e) => updatePos({ exposureNote: e.target.value })} />
+        </label>
+      </div>
+
+      <h4 className="tiny-2" style={{ letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 12 }}>
+        校准证书（{certs.length}）
+      </h4>
+      <div className="stack" style={{ gap: 6 }}>
+        {certs.map((c, i) => (
+          <div key={c.id} className="grid c4" style={{ gap: 6, alignItems: 'end' }}>
+            <label className="field tiny-2">证书编号
+              <input type="text" value={c.id} onChange={(e) => onChange({ certificates: certs.map((x, j) => j === i ? { ...x, id: e.target.value } : x) })} />
+            </label>
+            <label className="field tiny-2">检定机构
+              <input type="text" value={c.lab} onChange={(e) => onChange({ certificates: certs.map((x, j) => j === i ? { ...x, lab: e.target.value } : x) })} />
+            </label>
+            <label className="field tiny-2">有效期至
+              <input type="datetime-local" value={inputFor(c.validUntil)}
+                onChange={(e) => onChange({ certificates: certs.map((x, j) => j === i ? { ...x, validUntil: e.target.value ? Date.parse(`${e.target.value}:00+08:00`) : null } : x) })} />
+            </label>
+            <label className="field tiny-2">20℃ 示值偏差 ℃
+              <input type="number" step="0.05" value={c.biasAt20C ?? ''} onChange={(e) => onChange({ certificates: certs.map((x, j) => j === i ? { ...x, biasAt20C: e.target.value === '' ? null : Number(e.target.value) } : x) })} />
+            </label>
+            <label className="field tiny-2" style={{ gridColumn: 'span 3' }}>单据引用 / 备注
+              <input type="text" value={`${c.documentRef}${c.statusNote ? ` · ${c.statusNote}` : ''}`}
+                onChange={(e) => onChange({ certificates: certs.map((x, j) => j === i ? { ...x, documentRef: e.target.value } : x) })} />
+            </label>
+            <button type="button" className="btn ghost sm" onClick={() => onChange({ certificates: certs.filter((_, j) => j !== i) })}>删除证书</button>
+          </div>
+        ))}
+        <button type="button" className="btn sm" onClick={addCert}><Plus size={12} /> 新增证书</button>
+      </div>
+
+      <h4 className="tiny-2" style={{ letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 12 }}>
+        更换 / 外墙改造 / 重新校准事件（{events.length}，按事件时间自动拆段）
+      </h4>
+      <div className="stack" style={{ gap: 6 }}>
+        {events.map((ev, i) => (
+          <div key={ev.id} className="grid c4" style={{ gap: 6, alignItems: 'end' }}>
+            <label className="field tiny-2">事件类型
+              <select value={ev.kind} onChange={(e) => onChange({ lifecycleEvents: events.map((x, j) => j === i ? { ...x, kind: e.target.value as ProbeLifecycleEvent['kind'] } : x) })}>
+                {LIFECYCLE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            </label>
+            <label className="field tiny-2">事件时间
+              <input type="datetime-local" value={inputFor(ev.eventTs)}
+                onChange={(e) => onChange({ lifecycleEvents: events.map((x, j) => j === i ? { ...x, eventTs: Date.parse(`${e.target.value}:00+08:00`) } : x) })} />
+            </label>
+            <label className="field tiny-2" style={{ gridColumn: 'span 2' }}>摘要 / 单据
+              <input type="text" value={`${ev.summary}${ev.documentRef ? ` · ${ev.documentRef}` : ''}`}
+                onChange={(e) => onChange({ lifecycleEvents: events.map((x, j) => j === i ? { ...x, summary: e.target.value } : x) })} />
+            </label>
+            <button type="button" className="btn ghost sm" onClick={() => onChange({ lifecycleEvents: events.filter((_, j) => j !== i) })}>删除事件</button>
+          </div>
+        ))}
+        <button type="button" className="btn sm" onClick={addEvent}><Plus size={12} /> 新增事件</button>
+      </div>
+
+      <h4 className="tiny-2" style={{ letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 12 }}>邻近探头关系（{neighbors.length}）</h4>
+      <div className="stack" style={{ gap: 6 }}>
+        {neighbors.map((n, i) => (
+          <div key={i} className="row" style={{ gap: 6 }}>
+            <select value={n.probeId} onChange={(e) => onChange({ neighborLinks: neighbors.map((x, j) => j === i ? { ...x, probeId: e.target.value } : x) })}>
+              {allProbes.filter((p) => p.id !== probe.id).map((p) => <option key={p.id} value={p.id}>{p.id} · {p.label}</option>)}
+            </select>
+            <select value={n.relation} onChange={(e) => onChange({ neighborLinks: neighbors.map((x, j) => j === i ? { ...x, relation: e.target.value as NeighborLink['relation'] } : x) })}>
+              <option value="same_building">同楼栋</option>
+              <option value="same_floor">同楼层</option>
+              <option value="same_riser">同立管</option>
+              <option value="adjacent_building">相邻楼栋</option>
+            </select>
+            <input type="text" placeholder="关系证据编号" value={n.evidenceRef}
+              onChange={(e) => onChange({ neighborLinks: neighbors.map((x, j) => j === i ? { ...x, evidenceRef: e.target.value } : x) })} />
+            <button type="button" className="btn ghost sm" onClick={() => onChange({ neighborLinks: neighbors.filter((_, j) => j !== i) })}>删除</button>
+          </div>
+        ))}
+        <button type="button" className="btn sm" onClick={addNeighbor}><Plus size={12} /> 新增邻近关系</button>
       </div>
     </Modal>
   );

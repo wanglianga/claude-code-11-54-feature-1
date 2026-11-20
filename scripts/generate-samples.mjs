@@ -83,21 +83,153 @@ const buildings = [
   },
 ];
 
+// 位置档案与设备档案：安装高度、朝向、房间类型、位置证据、校准证书、生命周期事件、邻近探头。
+const POS = {
+  externalNorth: (floor, evidence, note) => ({
+    floor, height_m: 1.5, orientation: 'north', wall_position: 'external_wall',
+    room_type: 'living_room', exposure_note: note, evidence_ref: evidence,
+    evidence_since: '2025-11-01T00:00:00+08:00',
+  }),
+  externalWestBedroom: (floor, evidence, note) => ({
+    floor, height_m: 1.6, orientation: 'west', wall_position: 'external_wall',
+    room_type: 'bedroom', exposure_note: note, evidence_ref: evidence,
+    evidence_since: '2025-11-01T00:00:00+08:00',
+  }),
+  internal: (floor, room = 'living_room') => ({
+    floor, height_m: 1.5, orientation: 'interior', wall_position: 'internal_wall',
+    room_type: room, exposure_note: '内区中间户，远离外墙冷桥', evidence_ref: `INST-POS-${floor}`,
+    evidence_since: '2025-11-01T00:00:00+08:00',
+  }),
+};
+
+const validCert = (id, bias, lab = '市计量检定院') => ({
+  id, lab, calibrated_at: '2025-11-02T10:00:00+08:00', valid_until: '2026-11-01T10:00:00+08:00',
+  bias_at_20c: bias, uncertainty_c: 0.3, document_ref: `${id}.pdf`, status_note: '有效期覆盖整个采暖期',
+});
+
 const probes = [
-  { id: 'P-301', building_id: 'B01', label: '3号楼1单元102客厅', interval_min: 10, installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '一层，靠近外墙' },
-  { id: 'P-302', building_id: 'B01', label: '3号楼3单元501客厅', interval_min: 15, installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '五层中间户' },
-  { id: 'P-501', building_id: 'B02', label: '5号楼1单元302客厅', interval_min: 10, installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '三层中间户' },
-  { id: 'P-502', building_id: 'B02', label: '5号楼2单元401客厅', interval_min: 15, installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '四层边户' },
-  { id: 'P-801', building_id: 'B03', label: '8号楼1单元601客厅', interval_min: 10, installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '高区，六层' },
-  { id: 'P-802', building_id: 'B03', label: '8号楼3单元402客厅', interval_min: 15, installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '三层中间户' },
-  { id: 'P-803', building_id: 'B03', label: '8号楼2单元801卧室', interval_min: 30, installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '八层边户' },
-  { id: 'P-701', building_id: 'B04', label: '7号楼2单元502客厅', interval_min: 15, installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '五层中间户，唯一探头' },
-  { id: 'P-1201', building_id: 'B07', label: '12号楼1单元301客厅', interval_min: 15, installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '三层中间户' },
-  { id: 'P-1202', building_id: 'B07', label: '12号楼2单元604客厅', interval_min: 30, installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '六层边户' },
-  { id: 'P-1101', building_id: 'B08', label: '1号楼1单元201客厅', interval_min: 10, installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '二层中间户' },
-  { id: 'P-1102', building_id: 'B08', label: '1号楼2单元502客厅', interval_min: 15, installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '五层中间户' },
-  { id: 'P-601', building_id: 'B09', label: '6号楼1单元402客厅', interval_min: 15, installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '四层中间户' },
-  { id: 'P-602', building_id: 'B09', label: '6号楼2单元703卧室', interval_min: 30, installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '七层边户' },
+  {
+    id: 'P-301', building_id: 'B01', label: '3号楼1单元102客厅', interval_min: 10,
+    installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '一层，靠近外墙',
+    // 场景一：外墙探头，证据齐全，长期比邻近中间户低 ~1.3℃（固定安装位置效应）。
+    position: POS.externalNorth(1, 'INST-301', '一层北向外墙，窗下冷桥位置，安装单与现场照片齐全'),
+    certificates: [validCert('CAL-301', 0.1)],
+    lifecycle_events: [],
+    neighbor_links: [{ probe_id: 'P-302', relation: 'same_building', floor_delta: 4, note: '同栋中间户对照', evidence_ref: 'SURVEY-B01' }],
+  },
+  {
+    id: 'P-302', building_id: 'B01', label: '3号楼3单元501客厅', interval_min: 15,
+    installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '五层中间户',
+    position: POS.internal(5), certificates: [validCert('CAL-302', 0.0)], lifecycle_events: [],
+    neighbor_links: [{ probe_id: 'P-301', relation: 'same_building', floor_delta: -4, note: '外墙探头对照', evidence_ref: 'SURVEY-B01' }],
+  },
+  {
+    id: 'P-501', building_id: 'B02', label: '5号楼1单元302客厅', interval_min: 10,
+    installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '三层中间户',
+    position: POS.internal(3), certificates: [validCert('CAL-501', 0.05)], lifecycle_events: [],
+    neighbor_links: [{ probe_id: 'P-502', relation: 'same_building', floor_delta: 1, note: '边户对照', evidence_ref: 'SURVEY-B02' }],
+  },
+  {
+    id: 'P-502', building_id: 'B02', label: '5号楼2单元401客厅', interval_min: 15,
+    installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '四层边户',
+    // 场景五：1/8 外墙保温改造完工，改造前后位置效应不同，按事件时间拆段评估。
+    position: POS.externalNorth(4, 'INST-502', '四层北向外墙；2026-01-08 保温改造前冷桥明显'),
+    certificates: [validCert('CAL-502', -0.1)],
+    lifecycle_events: [{
+      id: 'EV-502-WALL', kind: 'external_wall_works', event_ts: '2026-01-08T06:00:00+08:00',
+      summary: '四层外墙保温改造完工，冷桥减弱，探头未移动', document_ref: 'WO-WALL-2026-007',
+      position_after: POS.externalNorth(4, 'INST-502', '四层北向外墙；保温改造后冷桥显著减弱'),
+    }],
+    neighbor_links: [{ probe_id: 'P-501', relation: 'same_building', floor_delta: -1, note: '中间户对照', evidence_ref: 'SURVEY-B02' }],
+  },
+  {
+    id: 'P-801', building_id: 'B03', label: '8号楼1单元601客厅', interval_min: 10,
+    installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '高区，六层',
+    position: POS.internal(6), certificates: [validCert('CAL-801', 0.0)], lifecycle_events: [],
+    neighbor_links: [{ probe_id: 'P-802', relation: 'same_riser', floor_delta: -3, note: '同立管对照', evidence_ref: 'SURVEY-B03' }],
+  },
+  {
+    id: 'P-802', building_id: 'B03', label: '8号楼3单元402客厅', interval_min: 15,
+    installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '三层中间户',
+    // 场景二：1/13 真实局部停供（立管阀门），偏差调整不得抹除该证据。
+    position: POS.internal(3), certificates: [validCert('CAL-802', 0.05)], lifecycle_events: [],
+    neighbor_links: [
+      { probe_id: 'P-801', relation: 'same_riser', floor_delta: 3, note: '同立管对照', evidence_ref: 'SURVEY-B03' },
+      { probe_id: 'P-803', relation: 'same_building', floor_delta: 5, note: '同栋边户对照', evidence_ref: 'SURVEY-B03' },
+    ],
+  },
+  {
+    id: 'P-803', building_id: 'B03', label: '8号楼2单元801卧室', interval_min: 30,
+    installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '八层边户',
+    position: POS.externalWestBedroom(8, 'INST-803', '八层西向外墙卧室'),
+    certificates: [validCert('CAL-803', 0.15)], lifecycle_events: [],
+    neighbor_links: [{ probe_id: 'P-802', relation: 'same_building', floor_delta: -5, note: '中间户对照', evidence_ref: 'SURVEY-B03' }],
+  },
+  {
+    id: 'P-701', building_id: 'B04', label: '7号楼2单元502客厅', interval_min: 15,
+    installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '五层中间户，唯一探头',
+    // 场景五（稀疏布局）：全楼唯一探头且 1/8 后永久断线，无邻近可比、无证书 → 两条路线均不放行校正。
+    position: POS.internal(5), certificates: [],
+    lifecycle_events: [{
+      id: 'EV-701-DEAD', kind: 'removed', event_ts: '2026-01-08T18:00:00+08:00',
+      summary: '通信模块故障后停止上传，现场尚未更换', document_ref: 'WO-FAULT-701',
+    }],
+    neighbor_links: [],
+  },
+  {
+    id: 'P-1201', building_id: 'B07', label: '12号楼1单元301客厅', interval_min: 15,
+    installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '三层中间户',
+    position: POS.internal(3), certificates: [validCert('CAL-1201', 0.0)], lifecycle_events: [],
+    neighbor_links: [{ probe_id: 'P-1202', relation: 'same_riser', floor_delta: 3, note: '同立管边户对照', evidence_ref: 'SURVEY-B07' }],
+  },
+  {
+    id: 'P-1202', building_id: 'B07', label: '12号楼2单元604客厅', interval_min: 30,
+    installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '六层边户',
+    // 场景四：1/9 探头更换，新旧证书按事件时间拆段；更换后新探头在外墙位置存在 ~1℃ 固定偏差。
+    position: POS.externalNorth(6, 'INST-1202', '六层北向外墙边户，更换后仍装于原支架'),
+    certificates: [
+      { id: 'CAL-1202-A', lab: '市计量检定院', calibrated_at: '2025-11-02T10:00:00+08:00', valid_until: '2026-01-09T08:00:00+08:00', bias_at_20c: 0.1, uncertainty_c: 0.3, document_ref: 'CAL-1202-A.pdf', status_note: '旧探头证书，更换日到期' },
+      { id: 'CAL-1202-B', lab: '市计量检定院', calibrated_at: '2026-01-09T09:30:00+08:00', valid_until: '2027-01-09T09:30:00+08:00', bias_at_20c: 0.2, uncertainty_c: 0.25, document_ref: 'CAL-1202-B.pdf', status_note: '更换后新探头出厂检定' },
+    ],
+    lifecycle_events: [{
+      id: 'EV-1202-REPLACE', kind: 'replaced', event_ts: '2026-01-09T08:00:00+08:00',
+      summary: '探头整体更换为新型号，新证书 CAL-1202-B', document_ref: 'WO-REPLACE-1202',
+      certificate_id_after: 'CAL-1202-B',
+      position_after: POS.externalNorth(6, 'INST-1202', '六层北向外墙边户，更换后仍装于原支架'),
+    }],
+    neighbor_links: [{ probe_id: 'P-1201', relation: 'same_riser', floor_delta: -3, note: '同立管中间户对照', evidence_ref: 'SURVEY-B07' }],
+  },
+  {
+    id: 'P-1101', building_id: 'B08', label: '1号楼1单元201客厅', interval_min: 10,
+    installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '二层中间户',
+    position: POS.internal(2), certificates: [validCert('CAL-1101', 0.0)], lifecycle_events: [],
+    neighbor_links: [{ probe_id: 'P-1102', relation: 'same_building', floor_delta: 3, note: '同栋对照', evidence_ref: 'SURVEY-B08' }],
+  },
+  {
+    id: 'P-1102', building_id: 'B08', label: '1号楼2单元502客厅', interval_min: 15,
+    installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '五层中间户',
+    position: POS.internal(5), certificates: [validCert('CAL-1102', -0.05)], lifecycle_events: [],
+    neighbor_links: [{ probe_id: 'P-1101', relation: 'same_building', floor_delta: -3, note: '同栋对照', evidence_ref: 'SURVEY-B08' }],
+  },
+  {
+    id: 'P-601', building_id: 'B09', label: '6号楼1单元402客厅', interval_min: 15,
+    installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '四层中间户',
+    position: POS.internal(4), certificates: [validCert('CAL-601', 0.0)], lifecycle_events: [],
+    neighbor_links: [{ probe_id: 'P-602', relation: 'same_building', floor_delta: 3, note: '边户卧室对照', evidence_ref: 'SURVEY-B09' }],
+  },
+  {
+    id: 'P-602', building_id: 'B09', label: '6号楼2单元703卧室', interval_min: 30,
+    installed_at: '2025-11-01T00:00:00+08:00', removed_at: null, location_note: '七层边户',
+    // 场景三：1/10 起渐进漂移；证书 2025 年底已过期，门控不放行自动校正，只能给出位置/漂移不可区分区间。
+    position: POS.externalWestBedroom(7, 'INST-602', '七层西向外墙卧室，位置证据齐全但校准证书过期'),
+    certificates: [{
+      id: 'CAL-602-EXPIRED', lab: '市计量检定院', calibrated_at: '2024-12-20T10:00:00+08:00',
+      valid_until: '2025-12-31T10:00:00+08:00', bias_at_20c: -0.2, uncertainty_c: 0.4,
+      document_ref: 'CAL-602-EXPIRED.pdf', status_note: '证书已过期，复检计划排在采暖期结束后',
+    }],
+    lifecycle_events: [],
+    neighbor_links: [{ probe_id: 'P-601', relation: 'same_building', floor_delta: -3, note: '中间户客厅对照', evidence_ref: 'SURVEY-B09' }],
+  },
 ];
 
 write('registry.json', JSON.stringify({
@@ -171,6 +303,33 @@ function eventDelta(probeId, t) {
   return target;
 }
 
+// 固定安装位置效应与探头漂移（与事件性停供相互独立，用于位置偏差评估验收）。
+const DRIFT_START = L(2026, 1, 10, 0, 0);
+function positionBias(probeId, t) {
+  switch (probeId) {
+    // 场景一：北向外墙冷桥，全窗口稳定 -1.3℃（证书证明仪器本身无负偏差）。
+    case 'P-301':
+      return -1.3;
+    // 场景五：保温改造（1/8 06:00）前外墙冷桥 -1.0℃，改造后收敛到 -0.3℃。
+    case 'P-502':
+      return t < L(2026, 1, 8, 6, 0) ? -1.0 : -0.3;
+    // 西向外墙卧室，轻度固定冷桥。
+    case 'P-803':
+      return -0.5;
+    // 场景四：1/9 08:00 更换后的新探头在外墙支架上稳定偏低 ~1.0℃；更换前为 0。
+    case 'P-1202':
+      return t >= L(2026, 1, 9, 8, 0) ? -1.0 : 0;
+    // 场景三：1/10 起渐进漂移，9 天内从 0 扩大到 -2.2℃，且校准证书已过期。
+    case 'P-602': {
+      if (t < DRIFT_START) return 0;
+      const days = (t - DRIFT_START) / 86_400_000;
+      return -Math.min(2.2, 0.25 * days);
+    }
+    default:
+      return 0;
+  }
+}
+
 const coreReadings = [];
 const lateReadings = [];
 const randPerProbe = new Map();
@@ -203,6 +362,7 @@ for (const p of probes) {
     const d = new Date(ts + OFFSET);
     const hour = d.getUTCHours() + d.getUTCMinutes() / 60;
     let value = base + 0.35 * Math.sin(((hour - 13) / 24) * Math.PI * 2) + (r() - 0.5) * 0.3;
+    value += positionBias(p.id, ts);
     const target = eventDelta(p.id, ts);
     if (target !== null) {
       value = Math.min(value, target + (r() - 0.5) * 0.25);
@@ -247,6 +407,18 @@ const workOrders = [
     work_order_id: 'WO-2006', building: '北岸新城15号楼', type: 'maintenance',
     start: iso(L(2026, 1, 14, 10, 0)), end: iso(L(2026, 1, 14, 12, 0)),
     summary: '楼栋名称未在登记册中，需人工核对（地址对齐问题样例）', recorded_at: iso(L(2026, 1, 14, 13, 0)),
+  },
+  {
+    work_order_id: 'WO-WALL-2026-007', building: '北岸新城5号楼', type: 'maintenance',
+    start: iso(L(2026, 1, 7, 9, 0)), end: iso(L(2026, 1, 8, 6, 0)),
+    summary: '4 层北向外墙保温改造完工，冷桥减弱；探头 P-502 未移动，位置档案按事件时间拆段',
+    recorded_at: iso(L(2026, 1, 8, 7, 0)),
+  },
+  {
+    work_order_id: 'WO-REPLACE-1202', building: '北岸新城12号楼', type: 'maintenance',
+    start: iso(L(2026, 1, 9, 7, 30)), end: iso(L(2026, 1, 9, 8, 30)),
+    summary: 'P-1202 探头整体更换，新探头沿用原外墙支架，绑定新校准证书 CAL-1202-B',
+    recorded_at: iso(L(2026, 1, 9, 9, 0)),
   },
 ];
 write('work_orders_2026-01.json', JSON.stringify(workOrders, null, 2) + '\n');
@@ -360,6 +532,14 @@ const manifest = {
     ambiguous_address: 'C-1006、C-1007 地址无法唯一归属，应保持未归属并给出候选。',
     misalignment: 'C-1008 工单记录停供但读数正常，监测与工单无法可靠对齐。',
     late_data: '1/17 供热日 1号楼读数与补录工单在截止后到达，旧运行应提示覆盖截止且不局部刷新。',
+  },
+  bias_scenarios: {
+    external_wall_adjustable: 'P-301 北向外墙、证书有效且位置证据齐全，全窗口稳定比邻近 P-302 低约 1.3℃：路线 A 门控通过，调整视图上抬但原始读数与原始风险保留。',
+    real_local_outage: 'P-802 无持续位置偏差，1/13 立管阀门导致的真实局部停供在原始视图、调整视图与不可区分区间下都不被抹除。',
+    drift_expired_cert: 'P-602 自 1/10 渐进漂移且校准证书 2025 年底过期：门控拒绝自动校正，只给位置效应/漂移不可区分区间与模型预测区间，模型估计不得当作实测。',
+    replacement_segments: 'P-1202 于 1/9 更换，按事件时间拆成两段：旧段无偏差，新段在外墙支架稳定偏低约 1.0℃，新证书有效时新段门控通过。',
+    wall_works_segments: 'P-502 所在外墙 1/8 保温改造：拆段后改造前冷桥约 -1.0℃、改造后收敛到 -0.3℃（低于证据下限不再调整）。',
+    sparse_layout: 'P-701 是 7 号楼唯一探头且无证书、无邻近探头：两条路线均不放行校正，层级模型标注适用范围，结论保持无法判断。',
   },
 };
 write('manifest.json', JSON.stringify(manifest, null, 2) + '\n');

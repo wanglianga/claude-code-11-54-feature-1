@@ -4,6 +4,7 @@ import { Panel } from '../components/ui/primitives';
 import { PageHead } from '../components/Layout';
 import { useStore } from '../state/store';
 import { DEFAULT_CONFIG } from '../types';
+import { pct } from '../lib/format';
 
 export function MethodPage() {
   const state = useStore();
@@ -95,6 +96,37 @@ export function MethodPage() {
           </ul>
         </Panel>
       </div>
+
+      <Panel title="探头位置偏差与风险敏感性：两条并行路线" sub="同一楼层两只探头长期偏低，既可能是外墙安装的空间差异，也可能是探头漂移；工具不替审查人二选一，而是给出可回查的证据与区间。">
+        <div className="grid c2">
+          <div>
+            <h3 className="tiny-2" style={{ letterSpacing: '0.08em', textTransform: 'uppercase' }}>路线 A：固定安装分层的稳健邻近比较</h3>
+            <ul className="bullet-list">
+              <li><span>只在<b>相同供热日、室外温度带宽 ±{cfg.biasWeatherBandC}℃、双方覆盖率差 ≤ {cfg.biasCoverageTolerance}</b> 的条件下配对比较，取当日中位数之差。</span></li>
+              <li><span>每个探头按更换、外墙改造、重新校准的事件时间<b>拆段</b>，每段独立计算稳健中位差与 MAD，逐项比较点可在「位置偏差」页逐点回查。</span></li>
+              <li><span>自动校正门控须同时满足：位置证据编号存在、校准证书在段内有效、可比供热日 ≥ {cfg.biasMinComparableDays} 天、持续中位差达到 {cfg.biasMinPersistentDeltaC}℃ 且方向稳定、证书示值偏差不与邻近证据反向冲突。</span></li>
+              <li><span>优点是证据逐项可审查、不需要训练历史模型；局限是布局稀疏或改造后可比探头不足时只能报告「不可比」，不产生调整视图。</span></li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="tiny-2" style={{ letterSpacing: '0.08em', textTransform: 'uppercase' }}>路线 B：含位置与天气协变量的层级模型</h3>
+            <ul className="bullet-list">
+              <li><span>模型形式：<span className="mono tiny-2">y = 供热日固定效应(吸收天气) + 楼栋截距 + 外墙/冷朝向/楼层/房间类型固定效应 + 探头随机效应 u + ε</span>。</span></li>
+              <li><span>探头随机效应做经验贝叶斯收缩：单探头样本少时向同楼栋/同类型总体靠拢，并给出基于残差 MAD 的 {pct(cfg.biasModelIntervalLevel)} 预测区间。</span></li>
+              <li><span>楼栋内有效探头少于 {cfg.biasModelMinProbes} 个时回退全小区池化，并明确标注<b>适用范围</b>（仅可外推到相同外墙/朝向/房间类型）；池化仍不足则标记模型不适用。</span></li>
+              <li><span><b>模型估计永远不被当作实测</b>：它只用于界定位置效应与漂移的不可区分区间，门控不放行时不产生任何自动校正。</span></li>
+            </ul>
+          </div>
+        </div>
+        <div className="callout warn" style={{ marginTop: 12 }}>
+          <GitBranch size={15} color="var(--medium)" />
+          <div className="tiny-2" style={{ lineHeight: 1.7 }}>
+            <strong>三视图与不自动校正原则。</strong>
+            原始视图（原始读数、原始风险，永不改写）→ 证据支持的偏差调整视图（仅门控通过段生效）→ 位置效应/漂移不可区分区间（证书过期、位置证据或邻近覆盖不足时，结论只给区间不给校正）。
+            真实局部停供发生在事件时间轴上，与稳定位置偏差形态不同，调整视图不会抹除停供工单与持续低温证据；补证只生成新运行，设备档案、位置证据、风险计算与报告引用同一版本快照。
+          </div>
+        </div>
+      </Panel>
 
       <Panel title="本次运行实际使用的参数" sub="参数随运行快照保存，历史运行不受后续修改影响。">
         <div className="grid c3">

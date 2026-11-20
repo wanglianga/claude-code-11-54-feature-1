@@ -13,6 +13,7 @@ import {
   Timer,
   FileText,
   Info,
+  Thermometer as ThermometerIcon,
 } from 'lucide-react';
 import { store, useStore } from '../state/store';
 import { bytes } from '../lib/format';
@@ -24,6 +25,7 @@ const NAV = [
   { to: '/mapping', label: '楼栋映射', icon: MapPin, key: 'mapping' },
   { to: '/runs', label: '运行', icon: PlayCircle, key: 'runs' },
   { to: '/results', label: '分析结果', icon: LayoutDashboard, key: 'results' },
+  { to: '/bias', label: '位置偏差', icon: ThermometerIcon, key: 'bias' },
   { to: '/complaints', label: '投诉证据', icon: ListChecks, key: 'complaints' },
   { to: '/reports', label: '运行报告', icon: FileText, key: 'reports' },
   { to: '/method', label: '方法与规则', icon: Info, key: 'method' },
@@ -35,6 +37,7 @@ const TITLES: Record<string, { title: string; sub: string }> = {
   mapping: { title: '楼栋映射', sub: '维护楼栋、探头与投诉地址的对应关系；修订只影响新运行' },
   runs: { title: '分析运行', sub: '固定输入、规则与截止时点，生成可回查的运行快照' },
   results: { title: '分析结果', sub: '以楼栋 × 供热日覆盖面为底表，投诉作为解释线索关联' },
+  bias: { title: '位置偏差', sub: '区分外墙安装的固定位置效应与探头漂移，给出原始、调整与不可区分区间三视图' },
   complaints: { title: '投诉证据', sub: '逐条查看投诉发生时有什么证据，以及不确定性来自哪里' },
   reports: { title: '运行报告', sub: '报告固定引用一次运行的输入与规则，不随后续数据变化' },
   method: { title: '方法与规则', sub: '分类阈值的来源、判定路径与已知局限' },
@@ -112,7 +115,7 @@ export function Layout() {
               <span style={{ color: 'var(--ink-2)', fontWeight: 560 }}>运行版本</span>
             </div>
             <div style={{ marginTop: 4 }} className="mono">
-              {state.ready ? (latest ? latest.engineVersion : 'engine-1.4.0') : '加载中…'}
+              {state.ready ? (latest ? latest.engineVersion : 'engine-1.5.0') : '加载中…'}
             </div>
             <div style={{ marginTop: 2 }}>
               {state.batches.length} 批次 · {state.runs.length} 运行

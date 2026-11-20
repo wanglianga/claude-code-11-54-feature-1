@@ -21,6 +21,7 @@ import { PageHead } from '../components/Layout';
 import { ClassLegend, CoverageMatrix, DayChart, RiskBadge, WindowRibbon } from '../components/charts/charts';
 import { DAY_CLASS_META, RISK_META, STATUS_META, dateTime, fmtHash, fmtScore, pct } from '../lib/format';
 import { fmtDayLabel, fmtLocal, fmtLocalFull } from '../lib/time';
+import { GATE_LABELS, GATE_TONES } from '../lib/bias-labels';
 
 export function ResultsPage() {
   const state = useStore();
@@ -158,6 +159,21 @@ export function ResultsPage() {
       <Callout tone="info" icon={<Info size={15} color="var(--cool)" />}>
         <strong>底表逻辑：</strong>先为每栋楼建立按供热日排列的监测覆盖面，再把投诉作为解释线索关联进去。因此无投诉的楼栋也可能因覆盖不足进入「监测盲区」，而不会显示成“没有风险”。
       </Callout>
+
+      {r.bias && (
+        <Callout tone="info" icon={<Radar size={15} color="var(--teal)" />}>
+          <div className="row wrap" style={{ gap: 8 }}>
+            <strong>位置偏差敏感性已随本运行固化。</strong>
+            <span>
+              路线 A 门控通过 {r.bias.routeAEligibleSegments} 段、调整视图生效 {r.bias.routeAAdjustedSegments} 段；
+              {r.bias.buildingSensitivity.filter((b) => b.changed).length} 栋楼在调整视图下风险变化，
+              原始视图与原始读数保持不变。
+            </span>
+            <div className="spacer" />
+            <Link to={`/bias?run=${run.id}`} className="btn sm">查看位置偏差评估 <ArrowRight size={12} /></Link>
+          </div>
+        </Callout>
+      )}
 
       <Panel
         title="楼栋 × 供热日 覆盖面"
@@ -353,6 +369,60 @@ function riskOrder(r: RiskLevel): number {
   return r === 'high' ? 0 : r === 'medium' ? 1 : r === 'undetermined' ? 2 : 3;
 }
 
+function BiasDayNotice({
+  run,
+  buildingId,
+  dayKey,
+  probeIds,
+}: {
+  run: AnalysisRun;
+  buildingId: string;
+  dayKey: string;
+  probeIds: string[];
+}) {
+  const bias = run.result.bias;
+  if (!bias) return null;
+  const dayStart = run.result.buildingDays.find((d) => d.buildingId === buildingId && d.dayKey === dayKey)?.dayStartTs;
+  const rows = probeIds
+    .map((id) => {
+      const a = bias.probeAssessments.find((x) => x.probeId === id);
+      if (!a || dayStart === undefined) return null;
+      const seg = a.segments.find((s) => dayStart >= s.startTs && dayStart < s.endTs);
+      const robust = a.robust.find((r) => r.segmentIndex === seg?.segmentIndex);
+      return { a, seg, robust, id };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+  if (!rows.length) return null;
+  return (
+    <div>
+      <h4 className="tiny-2" style={{ letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+        当日位置偏差门控
+      </h4>
+      <div className="stack" style={{ gap: 6 }}>
+        {rows.map(({ id, seg, robust }) => (
+          <div key={id} className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+            <span className="mono tiny" style={{ width: 70 }}>{id}</span>
+            {seg?.gate.adjustmentAllowed ? (
+              <Chip tone="low">门控通过，调整视图 {robust && robust.adjustmentC !== 0 ? `+${robust.adjustmentC}℃` : '无修正量'}</Chip>
+            ) : (
+              (seg?.gate.reasons ?? []).map((code) => (
+                <Chip key={code} tone={GATE_TONES[code]}>{GATE_LABELS[code]}</Chip>
+              ))
+            )}
+            {robust?.persistentDeltaC !== null && robust?.persistentDeltaC !== undefined && (
+              <span className="tiny-2">邻近中位差 {robust.persistentDeltaC}℃（{robust.comparableDayCount} 个可比日）</span>
+            )}
+            <span className="tiny-2 muted">原始读数不修改</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ marginTop: 7 }}>
+        <Link to={`/bias?run=${run.id}`} className="btn ghost sm">打开位置偏差评估 <ArrowRight size={12} /></Link>
+      </div>
+    </div>
+  );
+}
+
 function CheckCircle2(props: { size: number; color: string }) {
   return (
     <svg width={props.size} height={props.size} viewBox="0 0 24 24" fill="none" stroke={props.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -497,6 +567,10 @@ export function DayDetail({
             </div>
           )}
         </div>
+      )}
+
+      {run.result.bias && (
+        <BiasDayNotice run={run} buildingId={day.buildingId} dayKey={day.dayKey} probeIds={day.coverage.activeProbeIds} />
       )}
 
       <div>

@@ -34,6 +34,7 @@ import type {
   WorkOrder,
 } from '../types';
 import { matchBuildingsInText, resolveComplaintAddress } from './address';
+import { evaluateBias } from './bias';
 import {
   dayEndTs,
   dayStartTs,
@@ -46,7 +47,7 @@ import {
   overlapMinutes,
 } from './time';
 
-export const ENGINE_VERSION = 'engine-1.4.0';
+export const ENGINE_VERSION = 'engine-1.5.0';
 
 export interface EngineInputs {
   batches: ImportBatch[];
@@ -1121,6 +1122,49 @@ export function runAnalysis(inputs: EngineInputs): RunResult {
     }
   }
 
+  // ---------- 探头位置偏差与楼栋风险敏感性（两条路线，均不改写原始读数） ----------
+  const biasSuite = evaluateBias({
+    probes,
+    dayKeys,
+    series,
+    coverage: coverageCache,
+    weatherAt,
+    buildingDays,
+    config,
+    windowStartTs: startTs,
+    windowEndTs: endTs,
+    engineVersion: ENGINE_VERSION,
+    now: 0,
+  });
+  const biasGateLabels: Record<string, string> = {
+    missing_position_evidence: '缺少位置证据',
+    missing_certificate: '缺少校准证书',
+    certificate_expired: '证书过期或无有效期',
+    certificate_conflict: '证书/邻近证据冲突',
+    insufficient_neighbors: '无可比邻近探头',
+    insufficient_comparable_days: '可比供热日不足或方向不稳定',
+    persistent_delta_below_threshold: '持续偏差低于证据下限',
+    sparse_layout: '布局稀疏',
+    model_not_applicable: '层级模型不适用',
+  };
+  for (const [code, count] of Object.entries(biasSuite.gateIssueCounts)) {
+    if (!count) continue;
+    alignmentIssues.push({
+      code: `bias_${code}`,
+      message: `位置偏差门控「${biasGateLabels[code] ?? code}」命中 ${count} 个探头-时间段：这些时段不自动校正，原始读数与原始风险保留。`,
+      count,
+      severity: code === 'certificate_conflict' ? 'warn' : 'info',
+    });
+  }
+  for (const item of biasSuite.routeBNotApplicable) {
+    alignmentIssues.push({
+      code: 'bias_model_sparse',
+      message: `楼栋 ${item.buildingId} 探头布局稀疏：${item.reason}`,
+      count: 1,
+      severity: 'info',
+    });
+  }
+
   // ---------- complaints ----------
   const probesByBuildingLabels = new Map<string, string[]>();
   for (const [bid, list] of probesByBuilding) probesByBuildingLabels.set(bid, list.map((p) => p.label));
@@ -1451,6 +1495,7 @@ export function runAnalysis(inputs: EngineInputs): RunResult {
     weatherSeries,
     mappingUsed: { buildings, probes },
     assertionsUsed: assertions.filter((a) => !a.superseded),
+    bias: biasSuite,
     diagnostics: {
       readingsUsed: dedupedReadings.length,
       weatherUsed: weather.length,

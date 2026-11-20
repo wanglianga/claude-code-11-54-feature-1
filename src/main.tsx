@@ -8,6 +8,7 @@ import { CoveragePage } from './pages/CoveragePage';
 import { MappingPage } from './pages/MappingPage';
 import { RunsPage } from './pages/RunsPage';
 import { ResultsPage } from './pages/ResultsPage';
+import { BiasPage } from './pages/BiasPage';
 import { ComplaintsPage } from './pages/ComplaintsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { MethodPage } from './pages/MethodPage';
@@ -23,6 +24,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/mapping" element={<MappingPage />} />
           <Route path="/runs" element={<RunsPage />} />
           <Route path="/results" element={<ResultsPage />} />
+          <Route path="/bias" element={<BiasPage />} />
           <Route path="/complaints" element={<ComplaintsPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/method" element={<MethodPage />} />

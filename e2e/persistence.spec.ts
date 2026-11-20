@@ -7,10 +7,10 @@ test('state persists across reloads and conflicting address decisions require a 
   await page.getByRole('button', { name: /导入随题样例/ }).click();
   await expect(page.getByText(/样例数据已导入/)).toBeVisible({ timeout: 60_000 });
 
-  // reload: batches are restored from IndexedDB
+  // reload: batches are restored from IndexedDB (row count is deterministic from the sample generator)
   await page.reload();
   await expect(page.getByText('readings_2026-01.csv')).toBeVisible();
-  await expect(page.getByText(/20,647|20647/).first()).toBeVisible();
+  await expect(page.getByText('19,662').first()).toBeVisible();
 
   // First decision for the ambiguous address: B03 only
   await page.getByRole('link', { name: '楼栋映射' }).click();

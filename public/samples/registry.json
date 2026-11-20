@@ -111,7 +111,39 @@
       "interval_min": 10,
       "installed_at": "2025-11-01T00:00:00+08:00",
       "removed_at": null,
-      "location_note": "一层，靠近外墙"
+      "location_note": "一层，靠近外墙",
+      "position": {
+        "floor": 1,
+        "height_m": 1.5,
+        "orientation": "north",
+        "wall_position": "external_wall",
+        "room_type": "living_room",
+        "exposure_note": "一层北向外墙，窗下冷桥位置，安装单与现场照片齐全",
+        "evidence_ref": "INST-301",
+        "evidence_since": "2025-11-01T00:00:00+08:00"
+      },
+      "certificates": [
+        {
+          "id": "CAL-301",
+          "lab": "市计量检定院",
+          "calibrated_at": "2025-11-02T10:00:00+08:00",
+          "valid_until": "2026-11-01T10:00:00+08:00",
+          "bias_at_20c": 0.1,
+          "uncertainty_c": 0.3,
+          "document_ref": "CAL-301.pdf",
+          "status_note": "有效期覆盖整个采暖期"
+        }
+      ],
+      "lifecycle_events": [],
+      "neighbor_links": [
+        {
+          "probe_id": "P-302",
+          "relation": "same_building",
+          "floor_delta": 4,
+          "note": "同栋中间户对照",
+          "evidence_ref": "SURVEY-B01"
+        }
+      ]
     },
     {
       "id": "P-302",
@@ -120,7 +152,39 @@
       "interval_min": 15,
       "installed_at": "2025-11-01T00:00:00+08:00",
       "removed_at": null,
-      "location_note": "五层中间户"
+      "location_note": "五层中间户",
+      "position": {
+        "floor": 5,
+        "height_m": 1.5,
+        "orientation": "interior",
+        "wall_position": "internal_wall",
+        "room_type": "living_room",
+        "exposure_note": "内区中间户，远离外墙冷桥",
+        "evidence_ref": "INST-POS-5",
+        "evidence_since": "2025-11-01T00:00:00+08:00"
+      },
+      "certificates": [
+        {
+          "id": "CAL-302",
+          "lab": "市计量检定院",
+          "calibrated_at": "2025-11-02T10:00:00+08:00",
+          "valid_until": "2026-11-01T10:00:00+08:00",
+          "bias_at_20c": 0,
+          "uncertainty_c": 0.3,
+          "document_ref": "CAL-302.pdf",
+          "status_note": "有效期覆盖整个采暖期"
+        }
+      ],
+      "lifecycle_events": [],
+      "neighbor_links": [
+        {
+          "probe_id": "P-301",
+          "relation": "same_building",
+          "floor_delta": -4,
+          "note": "外墙探头对照",
+          "evidence_ref": "SURVEY-B01"
+        }
+      ]
     },
     {
       "id": "P-501",
@@ -129,7 +193,39 @@
       "interval_min": 10,
       "installed_at": "2025-11-01T00:00:00+08:00",
       "removed_at": null,
-      "location_note": "三层中间户"
+      "location_note": "三层中间户",
+      "position": {
+        "floor": 3,
+        "height_m": 1.5,
+        "orientation": "interior",
+        "wall_position": "internal_wall",
+        "room_type": "living_room",
+        "exposure_note": "内区中间户，远离外墙冷桥",
+        "evidence_ref": "INST-POS-3",
+        "evidence_since": "2025-11-01T00:00:00+08:00"
+      },
+      "certificates": [
+        {
+          "id": "CAL-501",
+          "lab": "市计量检定院",
+          "calibrated_at": "2025-11-02T10:00:00+08:00",
+          "valid_until": "2026-11-01T10:00:00+08:00",
+          "bias_at_20c": 0.05,
+          "uncertainty_c": 0.3,
+          "document_ref": "CAL-501.pdf",
+          "status_note": "有效期覆盖整个采暖期"
+        }
+      ],
+      "lifecycle_events": [],
+      "neighbor_links": [
+        {
+          "probe_id": "P-502",
+          "relation": "same_building",
+          "floor_delta": 1,
+          "note": "边户对照",
+          "evidence_ref": "SURVEY-B02"
+        }
+      ]
     },
     {
       "id": "P-502",
@@ -138,7 +234,57 @@
       "interval_min": 15,
       "installed_at": "2025-11-01T00:00:00+08:00",
       "removed_at": null,
-      "location_note": "四层边户"
+      "location_note": "四层边户",
+      "position": {
+        "floor": 4,
+        "height_m": 1.5,
+        "orientation": "north",
+        "wall_position": "external_wall",
+        "room_type": "living_room",
+        "exposure_note": "四层北向外墙；2026-01-08 保温改造前冷桥明显",
+        "evidence_ref": "INST-502",
+        "evidence_since": "2025-11-01T00:00:00+08:00"
+      },
+      "certificates": [
+        {
+          "id": "CAL-502",
+          "lab": "市计量检定院",
+          "calibrated_at": "2025-11-02T10:00:00+08:00",
+          "valid_until": "2026-11-01T10:00:00+08:00",
+          "bias_at_20c": -0.1,
+          "uncertainty_c": 0.3,
+          "document_ref": "CAL-502.pdf",
+          "status_note": "有效期覆盖整个采暖期"
+        }
+      ],
+      "lifecycle_events": [
+        {
+          "id": "EV-502-WALL",
+          "kind": "external_wall_works",
+          "event_ts": "2026-01-08T06:00:00+08:00",
+          "summary": "四层外墙保温改造完工，冷桥减弱，探头未移动",
+          "document_ref": "WO-WALL-2026-007",
+          "position_after": {
+            "floor": 4,
+            "height_m": 1.5,
+            "orientation": "north",
+            "wall_position": "external_wall",
+            "room_type": "living_room",
+            "exposure_note": "四层北向外墙；保温改造后冷桥显著减弱",
+            "evidence_ref": "INST-502",
+            "evidence_since": "2025-11-01T00:00:00+08:00"
+          }
+        }
+      ],
+      "neighbor_links": [
+        {
+          "probe_id": "P-501",
+          "relation": "same_building",
+          "floor_delta": -1,
+          "note": "中间户对照",
+          "evidence_ref": "SURVEY-B02"
+        }
+      ]
     },
     {
       "id": "P-801",
@@ -147,7 +293,39 @@
       "interval_min": 10,
       "installed_at": "2025-11-01T00:00:00+08:00",
       "removed_at": null,
-      "location_note": "高区，六层"
+      "location_note": "高区，六层",
+      "position": {
+        "floor": 6,
+        "height_m": 1.5,
+        "orientation": "interior",
+        "wall_position": "internal_wall",
+        "room_type": "living_room",
+        "exposure_note": "内区中间户，远离外墙冷桥",
+        "evidence_ref": "INST-POS-6",
+        "evidence_since": "2025-11-01T00:00:00+08:00"
+      },
+      "certificates": [
+        {
+          "id": "CAL-801",
+          "lab": "市计量检定院",
+          "calibrated_at": "2025-11-02T10:00:00+08:00",
+          "valid_until": "2026-11-01T10:00:00+08:00",
+          "bias_at_20c": 0,
+          "uncertainty_c": 0.3,
+          "document_ref": "CAL-801.pdf",
+          "status_note": "有效期覆盖整个采暖期"
+        }
+      ],
+      "lifecycle_events": [],
+      "neighbor_links": [
+        {
+          "probe_id": "P-802",
+          "relation": "same_riser",
+          "floor_delta": -3,
+          "note": "同立管对照",
+          "evidence_ref": "SURVEY-B03"
+        }
+      ]
     },
     {
       "id": "P-802",
@@ -156,7 +334,46 @@
       "interval_min": 15,
       "installed_at": "2025-11-01T00:00:00+08:00",
       "removed_at": null,
-      "location_note": "三层中间户"
+      "location_note": "三层中间户",
+      "position": {
+        "floor": 3,
+        "height_m": 1.5,
+        "orientation": "interior",
+        "wall_position": "internal_wall",
+        "room_type": "living_room",
+        "exposure_note": "内区中间户，远离外墙冷桥",
+        "evidence_ref": "INST-POS-3",
+        "evidence_since": "2025-11-01T00:00:00+08:00"
+      },
+      "certificates": [
+        {
+          "id": "CAL-802",
+          "lab": "市计量检定院",
+          "calibrated_at": "2025-11-02T10:00:00+08:00",
+          "valid_until": "2026-11-01T10:00:00+08:00",
+          "bias_at_20c": 0.05,
+          "uncertainty_c": 0.3,
+          "document_ref": "CAL-802.pdf",
+          "status_note": "有效期覆盖整个采暖期"
+        }
+      ],
+      "lifecycle_events": [],
+      "neighbor_links": [
+        {
+          "probe_id": "P-801",
+          "relation": "same_riser",
+          "floor_delta": 3,
+          "note": "同立管对照",
+          "evidence_ref": "SURVEY-B03"
+        },
+        {
+          "probe_id": "P-803",
+          "relation": "same_building",
+          "floor_delta": 5,
+          "note": "同栋边户对照",
+          "evidence_ref": "SURVEY-B03"
+        }
+      ]
     },
     {
       "id": "P-803",
@@ -165,7 +382,39 @@
       "interval_min": 30,
       "installed_at": "2025-11-01T00:00:00+08:00",
       "removed_at": null,
-      "location_note": "八层边户"
+      "location_note": "八层边户",
+      "position": {
+        "floor": 8,
+        "height_m": 1.6,
+        "orientation": "west",
+        "wall_position": "external_wall",
+        "room_type": "bedroom",
+        "exposure_note": "八层西向外墙卧室",
+        "evidence_ref": "INST-803",
+        "evidence_since": "2025-11-01T00:00:00+08:00"
+      },
+      "certificates": [
+        {
+          "id": "CAL-803",
+          "lab": "市计量检定院",
+          "calibrated_at": "2025-11-02T10:00:00+08:00",
+          "valid_until": "2026-11-01T10:00:00+08:00",
+          "bias_at_20c": 0.15,
+          "uncertainty_c": 0.3,
+          "document_ref": "CAL-803.pdf",
+          "status_note": "有效期覆盖整个采暖期"
+        }
+      ],
+      "lifecycle_events": [],
+      "neighbor_links": [
+        {
+          "probe_id": "P-802",
+          "relation": "same_building",
+          "floor_delta": -5,
+          "note": "中间户对照",
+          "evidence_ref": "SURVEY-B03"
+        }
+      ]
     },
     {
       "id": "P-701",
@@ -174,7 +423,28 @@
       "interval_min": 15,
       "installed_at": "2025-11-01T00:00:00+08:00",
       "removed_at": null,
-      "location_note": "五层中间户，唯一探头"
+      "location_note": "五层中间户，唯一探头",
+      "position": {
+        "floor": 5,
+        "height_m": 1.5,
+        "orientation": "interior",
+        "wall_position": "internal_wall",
+        "room_type": "living_room",
+        "exposure_note": "内区中间户，远离外墙冷桥",
+        "evidence_ref": "INST-POS-5",
+        "evidence_since": "2025-11-01T00:00:00+08:00"
+      },
+      "certificates": [],
+      "lifecycle_events": [
+        {
+          "id": "EV-701-DEAD",
+          "kind": "removed",
+          "event_ts": "2026-01-08T18:00:00+08:00",
+          "summary": "通信模块故障后停止上传，现场尚未更换",
+          "document_ref": "WO-FAULT-701"
+        }
+      ],
+      "neighbor_links": []
     },
     {
       "id": "P-1201",
@@ -183,7 +453,39 @@
       "interval_min": 15,
       "installed_at": "2025-11-01T00:00:00+08:00",
       "removed_at": null,
-      "location_note": "三层中间户"
+      "location_note": "三层中间户",
+      "position": {
+        "floor": 3,
+        "height_m": 1.5,
+        "orientation": "interior",
+        "wall_position": "internal_wall",
+        "room_type": "living_room",
+        "exposure_note": "内区中间户，远离外墙冷桥",
+        "evidence_ref": "INST-POS-3",
+        "evidence_since": "2025-11-01T00:00:00+08:00"
+      },
+      "certificates": [
+        {
+          "id": "CAL-1201",
+          "lab": "市计量检定院",
+          "calibrated_at": "2025-11-02T10:00:00+08:00",
+          "valid_until": "2026-11-01T10:00:00+08:00",
+          "bias_at_20c": 0,
+          "uncertainty_c": 0.3,
+          "document_ref": "CAL-1201.pdf",
+          "status_note": "有效期覆盖整个采暖期"
+        }
+      ],
+      "lifecycle_events": [],
+      "neighbor_links": [
+        {
+          "probe_id": "P-1202",
+          "relation": "same_riser",
+          "floor_delta": 3,
+          "note": "同立管边户对照",
+          "evidence_ref": "SURVEY-B07"
+        }
+      ]
     },
     {
       "id": "P-1202",
@@ -192,7 +494,68 @@
       "interval_min": 30,
       "installed_at": "2025-11-01T00:00:00+08:00",
       "removed_at": null,
-      "location_note": "六层边户"
+      "location_note": "六层边户",
+      "position": {
+        "floor": 6,
+        "height_m": 1.5,
+        "orientation": "north",
+        "wall_position": "external_wall",
+        "room_type": "living_room",
+        "exposure_note": "六层北向外墙边户，更换后仍装于原支架",
+        "evidence_ref": "INST-1202",
+        "evidence_since": "2025-11-01T00:00:00+08:00"
+      },
+      "certificates": [
+        {
+          "id": "CAL-1202-A",
+          "lab": "市计量检定院",
+          "calibrated_at": "2025-11-02T10:00:00+08:00",
+          "valid_until": "2026-01-09T08:00:00+08:00",
+          "bias_at_20c": 0.1,
+          "uncertainty_c": 0.3,
+          "document_ref": "CAL-1202-A.pdf",
+          "status_note": "旧探头证书，更换日到期"
+        },
+        {
+          "id": "CAL-1202-B",
+          "lab": "市计量检定院",
+          "calibrated_at": "2026-01-09T09:30:00+08:00",
+          "valid_until": "2027-01-09T09:30:00+08:00",
+          "bias_at_20c": 0.2,
+          "uncertainty_c": 0.25,
+          "document_ref": "CAL-1202-B.pdf",
+          "status_note": "更换后新探头出厂检定"
+        }
+      ],
+      "lifecycle_events": [
+        {
+          "id": "EV-1202-REPLACE",
+          "kind": "replaced",
+          "event_ts": "2026-01-09T08:00:00+08:00",
+          "summary": "探头整体更换为新型号，新证书 CAL-1202-B",
+          "document_ref": "WO-REPLACE-1202",
+          "certificate_id_after": "CAL-1202-B",
+          "position_after": {
+            "floor": 6,
+            "height_m": 1.5,
+            "orientation": "north",
+            "wall_position": "external_wall",
+            "room_type": "living_room",
+            "exposure_note": "六层北向外墙边户，更换后仍装于原支架",
+            "evidence_ref": "INST-1202",
+            "evidence_since": "2025-11-01T00:00:00+08:00"
+          }
+        }
+      ],
+      "neighbor_links": [
+        {
+          "probe_id": "P-1201",
+          "relation": "same_riser",
+          "floor_delta": -3,
+          "note": "同立管中间户对照",
+          "evidence_ref": "SURVEY-B07"
+        }
+      ]
     },
     {
       "id": "P-1101",
@@ -201,7 +564,39 @@
       "interval_min": 10,
       "installed_at": "2025-11-01T00:00:00+08:00",
       "removed_at": null,
-      "location_note": "二层中间户"
+      "location_note": "二层中间户",
+      "position": {
+        "floor": 2,
+        "height_m": 1.5,
+        "orientation": "interior",
+        "wall_position": "internal_wall",
+        "room_type": "living_room",
+        "exposure_note": "内区中间户，远离外墙冷桥",
+        "evidence_ref": "INST-POS-2",
+        "evidence_since": "2025-11-01T00:00:00+08:00"
+      },
+      "certificates": [
+        {
+          "id": "CAL-1101",
+          "lab": "市计量检定院",
+          "calibrated_at": "2025-11-02T10:00:00+08:00",
+          "valid_until": "2026-11-01T10:00:00+08:00",
+          "bias_at_20c": 0,
+          "uncertainty_c": 0.3,
+          "document_ref": "CAL-1101.pdf",
+          "status_note": "有效期覆盖整个采暖期"
+        }
+      ],
+      "lifecycle_events": [],
+      "neighbor_links": [
+        {
+          "probe_id": "P-1102",
+          "relation": "same_building",
+          "floor_delta": 3,
+          "note": "同栋对照",
+          "evidence_ref": "SURVEY-B08"
+        }
+      ]
     },
     {
       "id": "P-1102",
@@ -210,7 +605,39 @@
       "interval_min": 15,
       "installed_at": "2025-11-01T00:00:00+08:00",
       "removed_at": null,
-      "location_note": "五层中间户"
+      "location_note": "五层中间户",
+      "position": {
+        "floor": 5,
+        "height_m": 1.5,
+        "orientation": "interior",
+        "wall_position": "internal_wall",
+        "room_type": "living_room",
+        "exposure_note": "内区中间户，远离外墙冷桥",
+        "evidence_ref": "INST-POS-5",
+        "evidence_since": "2025-11-01T00:00:00+08:00"
+      },
+      "certificates": [
+        {
+          "id": "CAL-1102",
+          "lab": "市计量检定院",
+          "calibrated_at": "2025-11-02T10:00:00+08:00",
+          "valid_until": "2026-11-01T10:00:00+08:00",
+          "bias_at_20c": -0.05,
+          "uncertainty_c": 0.3,
+          "document_ref": "CAL-1102.pdf",
+          "status_note": "有效期覆盖整个采暖期"
+        }
+      ],
+      "lifecycle_events": [],
+      "neighbor_links": [
+        {
+          "probe_id": "P-1101",
+          "relation": "same_building",
+          "floor_delta": -3,
+          "note": "同栋对照",
+          "evidence_ref": "SURVEY-B08"
+        }
+      ]
     },
     {
       "id": "P-601",
@@ -219,7 +646,39 @@
       "interval_min": 15,
       "installed_at": "2025-11-01T00:00:00+08:00",
       "removed_at": null,
-      "location_note": "四层中间户"
+      "location_note": "四层中间户",
+      "position": {
+        "floor": 4,
+        "height_m": 1.5,
+        "orientation": "interior",
+        "wall_position": "internal_wall",
+        "room_type": "living_room",
+        "exposure_note": "内区中间户，远离外墙冷桥",
+        "evidence_ref": "INST-POS-4",
+        "evidence_since": "2025-11-01T00:00:00+08:00"
+      },
+      "certificates": [
+        {
+          "id": "CAL-601",
+          "lab": "市计量检定院",
+          "calibrated_at": "2025-11-02T10:00:00+08:00",
+          "valid_until": "2026-11-01T10:00:00+08:00",
+          "bias_at_20c": 0,
+          "uncertainty_c": 0.3,
+          "document_ref": "CAL-601.pdf",
+          "status_note": "有效期覆盖整个采暖期"
+        }
+      ],
+      "lifecycle_events": [],
+      "neighbor_links": [
+        {
+          "probe_id": "P-602",
+          "relation": "same_building",
+          "floor_delta": 3,
+          "note": "边户卧室对照",
+          "evidence_ref": "SURVEY-B09"
+        }
+      ]
     },
     {
       "id": "P-602",
@@ -228,7 +687,39 @@
       "interval_min": 30,
       "installed_at": "2025-11-01T00:00:00+08:00",
       "removed_at": null,
-      "location_note": "七层边户"
+      "location_note": "七层边户",
+      "position": {
+        "floor": 7,
+        "height_m": 1.6,
+        "orientation": "west",
+        "wall_position": "external_wall",
+        "room_type": "bedroom",
+        "exposure_note": "七层西向外墙卧室，位置证据齐全但校准证书过期",
+        "evidence_ref": "INST-602",
+        "evidence_since": "2025-11-01T00:00:00+08:00"
+      },
+      "certificates": [
+        {
+          "id": "CAL-602-EXPIRED",
+          "lab": "市计量检定院",
+          "calibrated_at": "2024-12-20T10:00:00+08:00",
+          "valid_until": "2025-12-31T10:00:00+08:00",
+          "bias_at_20c": -0.2,
+          "uncertainty_c": 0.4,
+          "document_ref": "CAL-602-EXPIRED.pdf",
+          "status_note": "证书已过期，复检计划排在采暖期结束后"
+        }
+      ],
+      "lifecycle_events": [],
+      "neighbor_links": [
+        {
+          "probe_id": "P-601",
+          "relation": "same_building",
+          "floor_delta": -3,
+          "note": "中间户客厅对照",
+          "evidence_ref": "SURVEY-B09"
+        }
+      ]
     }
   ]
 }

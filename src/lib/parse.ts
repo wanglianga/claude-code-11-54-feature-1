@@ -1,21 +1,30 @@
 /** CSV / JSON parsing into canonical source records, with field mapping and issue capture. */
 import type {
   Building,
+  CalibrationCertificate,
+  CalibrationStatus,
   Complaint,
   FieldMapping,
   ImportIssue,
+  NeighborLink,
   ParsedFilePreview,
   ParsedSource,
   Probe,
+  ProbeInstallPosition,
+  ProbeLifecycleEvent,
+  ProbeLifecycleKind,
+  ProbeOrientation,
   Reading,
+  RoomType,
   SourceKind,
+  WallPosition,
   WeatherObs,
   WorkOrder,
   WorkOrderKind,
 } from '../types';
 import { parseTimestamp } from './time';
 
-export const PARSER_VERSION = 'parse-1.2.0';
+export const PARSER_VERSION = 'parse-1.3.0';
 
 export interface FieldSpec {
   canonical: string;
@@ -65,8 +74,146 @@ export const FIELD_SPECS: Record<SourceKind, FieldSpec[]> = {
     { canonical: 'installed_at', label: '安装时间', required: false, alternates: ['installed'], type: 'timestamp' },
     { canonical: 'removed_at', label: '拆除时间', required: false, alternates: ['removed'], type: 'timestamp' },
     { canonical: 'location_note', label: '安装位置说明', required: false, alternates: ['location'], type: 'string' },
+    { canonical: 'floor', label: '楼层', required: false, alternates: ['floor_no'], type: 'number' },
+    { canonical: 'height_m', label: '安装高度(米)', required: false, alternates: ['height'], type: 'number' },
+    { canonical: 'orientation', label: '朝向', required: false, alternates: ['facing'], type: 'string' },
+    { canonical: 'wall_position', label: '墙体位置', required: false, alternates: ['wall'], type: 'string' },
+    { canonical: 'room_type', label: '房间类型', required: false, alternates: ['room'], type: 'string' },
+    { canonical: 'exposure_note', label: '外露说明', required: false, alternates: ['exposure'], type: 'string' },
+    { canonical: 'position_evidence_ref', label: '位置证据编号', required: false, alternates: ['position_evidence'], type: 'string' },
+    { canonical: 'neighbor_probe_id', label: '邻近探头', required: false, alternates: ['neighbor'], type: 'string' },
+    { canonical: 'neighbor_relation', label: '邻近关系', required: false, alternates: ['relation'], type: 'string' },
+    { canonical: 'neighbor_floor_delta', label: '楼层差', required: false, alternates: ['floor_delta'], type: 'number' },
   ],
 };
+
+const ORIENTATIONS: Record<string, ProbeOrientation> = {
+  north: 'north', south: 'south', east: 'east', west: 'west', interior: 'interior', unknown: 'unknown',
+  北: 'north', 南: 'south', 东: 'east', 西: 'west', 朝北: 'north', 朝南: 'south', 朝东: 'east', 朝西: 'west',
+  内区: 'interior', 中间: 'interior', 未知: 'unknown',
+};
+const WALL_POSITIONS: Record<string, WallPosition> = {
+  external_wall: 'external_wall', internal_wall: 'internal_wall', interior: 'interior', unknown: 'unknown',
+  外墙: 'external_wall', 内墙: 'internal_wall', 内区: 'interior', 室内: 'interior', 未知: 'unknown',
+};
+const ROOM_TYPES: Record<string, RoomType> = {
+  living_room: 'living_room', bedroom: 'bedroom', kitchen: 'kitchen', stairwell: 'stairwell', other: 'other', unknown: 'unknown',
+  客厅: 'living_room', 卧室: 'bedroom', 厨房: 'kitchen', 楼梯间: 'stairwell', 其他: 'other', 未知: 'unknown',
+};
+const LIFECYCLE_KINDS: Record<string, ProbeLifecycleKind> = {
+  installed: 'installed', replaced: 'replaced', relocated: 'relocated',
+  external_wall_works: 'external_wall_works', recalibrated: 'recalibrated', removed: 'removed',
+  安装: 'installed', 更换: 'replaced', 迁移: 'relocated', 挪机: 'relocated',
+  外墙改造: 'external_wall_works', 外墙施工: 'external_wall_works', 重新校准: 'recalibrated', 校准: 'recalibrated',
+  拆除: 'removed',
+};
+
+function normEnum<T extends string>(map: Record<string, T>, raw: unknown, fallback: T): T {
+  const key = String(raw ?? '').trim().toLowerCase();
+  return map[key] ?? fallback;
+}
+
+function numOrNull(raw: unknown): number | null {
+  if (raw === null || raw === undefined || String(raw).trim() === '') return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+function parsePosition(raw: unknown): ProbeInstallPosition | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const p = raw as Record<string, unknown>;
+  const hasAny = ['floor', 'floor_no', 'height_m', 'heightM', 'height', 'orientation', 'facing',
+    'wall_position', 'wallPosition', 'wall', 'room_type', 'roomType', 'room',
+    'exposure_note', 'exposureNote', 'exposure', 'evidence_ref', 'evidenceRef'].some((k) => p[k] !== undefined && String(p[k] ?? '').trim() !== '');
+  if (!hasAny) return null;
+  const since = parseTimestamp(p.evidence_since ?? p.evidenceSinceTs ?? p.evidence_since_ts);
+  const evidenceRef = String(p.evidence_ref ?? p.evidenceRef ?? '').trim();
+  return {
+    floor: numOrNull(p.floor ?? p.floor_no),
+    heightM: numOrNull(p.height_m ?? p.heightM ?? p.height),
+    orientation: normEnum(ORIENTATIONS, p.orientation ?? p.facing, 'unknown'),
+    wallPosition: normEnum(WALL_POSITIONS, p.wall_position ?? p.wallPosition ?? p.wall, 'unknown'),
+    roomType: normEnum(ROOM_TYPES, p.room_type ?? p.roomType ?? p.room, 'unknown'),
+    exposureNote: String(p.exposure_note ?? p.exposureNote ?? p.exposure ?? '').trim(),
+    evidenceRef,
+    evidenceSinceTs: since,
+  };
+}
+
+function parseCertificates(raw: unknown): CalibrationCertificate[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((c0, idx): CalibrationCertificate => {
+    const c = c0 as Record<string, unknown>;
+    return {
+      id: String(c.id ?? c.certificate_id ?? `CERT-${idx + 1}`),
+      lab: String(c.lab ?? c.laboratory ?? '').trim(),
+      calibratedAt: parseTimestamp(c.calibrated_at ?? c.calibratedAt) ?? 0,
+      validUntil: parseTimestamp(c.valid_until ?? c.validUntil),
+      biasAt20C: numOrNull(c.bias_at_20c ?? c.biasAt20C ?? c.bias_20c),
+      uncertaintyC: numOrNull(c.uncertainty_c ?? c.uncertaintyC ?? c.uncertainty),
+      documentRef: String(c.document_ref ?? c.documentRef ?? c.document ?? '').trim(),
+      statusNote: String(c.status_note ?? c.statusNote ?? '').trim(),
+    };
+  });
+}
+
+function parseLifecycleEvents(raw: unknown): ProbeLifecycleEvent[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((e0, idx): ProbeLifecycleEvent => {
+    const e = e0 as Record<string, unknown>;
+    return {
+      id: String(e.id ?? e.event_id ?? `EV-${idx + 1}`),
+      kind: normEnum(LIFECYCLE_KINDS, e.kind ?? e.type, 'relocated'),
+      eventTs: parseTimestamp(e.event_ts ?? e.eventAt ?? e.ts) ?? 0,
+      summary: String(e.summary ?? e.note ?? '').trim(),
+      documentRef: String(e.document_ref ?? e.documentRef ?? e.document ?? '').trim(),
+      positionAfter: parsePosition(e.position_after ?? e.positionAfter) ?? undefined,
+      certificateIdAfter: e.certificate_id_after ?? e.certificateIdAfter
+        ? String(e.certificate_id_after ?? e.certificateIdAfter)
+        : undefined,
+    };
+  }).sort((a, b) => a.eventTs - b.eventTs);
+}
+
+function parseNeighborLinks(raw: unknown): NeighborLink[] {
+  if (!Array.isArray(raw)) return [];
+  const relations: Record<string, NeighborLink['relation']> = {
+    same_building: 'same_building', same_floor: 'same_floor',
+    adjacent_building: 'adjacent_building', same_riser: 'same_riser',
+    同楼栋: 'same_building', 同楼层: 'same_floor', 相邻楼栋: 'adjacent_building', 同立管: 'same_riser',
+  };
+  return raw.map((n0, idx): NeighborLink => {
+    const n = n0 as Record<string, unknown>;
+    return {
+      probeId: String(n.probe_id ?? n.probeId ?? n.id ?? '').trim(),
+      relation: normEnum(relations, n.relation, 'same_building'),
+      floorDelta: numOrNull(n.floor_delta ?? n.floorDelta),
+      note: String(n.note ?? '').trim(),
+      evidenceRef: String(n.evidence_ref ?? n.evidenceRef ?? '').trim(),
+    };
+  }).filter((n) => n.probeId.length > 0);
+}
+
+/** 校验证书在给定时刻的状态；窗口内出现有效期冲突时返回 conflict。 */
+export function certificateStatusAt(
+  certs: CalibrationCertificate[],
+  segmentStart: number,
+  segmentEnd: number,
+): { status: CalibrationStatus; certificateId: string | null } {
+  if (!certs.length) return { status: 'missing', certificateId: null };
+  const covering = certs.filter((c) => c.calibratedAt <= segmentEnd && (c.validUntil === null || c.validUntil >= segmentStart));
+  if (!covering.length) return { status: 'expired', certificateId: certs[0].id };
+  // 同一时段两张证书的 20℃ 示值偏差互相矛盾（差异 > 0.6℃）视为冲突。
+  if (covering.length >= 2) {
+    const biases = covering.map((c) => c.biasAt20C).filter((b): b is number => b !== null);
+    if (biases.length >= 2 && Math.max(...biases) - Math.min(...biases) > 0.6) {
+      return { status: 'conflict', certificateId: covering[0].id };
+    }
+  }
+  const valid = covering.find((c) => c.validUntil !== null && c.validUntil >= segmentEnd);
+  if (valid) return { status: 'valid', certificateId: valid.id };
+  return { status: 'expired', certificateId: covering[0].id };
+}
 
 export function detectDelimiter(firstLine: string): string {
   let best = ',';
@@ -423,11 +570,35 @@ export function parseSourceText(
         installedAt: parseTimestamp(p.installed_at) ?? 0,
         removedAt: parseTimestamp(p.removed_at) ?? undefined,
         locationNote: String(p.location_note ?? p.locationNote ?? ''),
+        position: parsePosition(p.position ?? p.install_position ?? p),
+        certificates: parseCertificates(p.certificates ?? p.calibration_certificates),
+        lifecycleEvents: parseLifecycleEvents(p.lifecycle_events ?? p.events),
+        neighborLinks: parseNeighborLinks(p.neighbor_links ?? p.neighbors),
       }));
       const buildingIds = new Set((source.buildings ?? []).map((b) => b.id));
       const orphans = (source.probes ?? []).filter((p) => p.buildingId && !buildingIds.has(p.buildingId));
       if (orphans.length) {
         addIssue(issues, 'registry_orphan', 'warn', '探头指向登记册中不存在的楼栋', orphans.map((p) => `${p.id}→${p.buildingId}`).join('、'));
+      }
+      const probeIds = new Set((source.probes ?? []).map((p) => p.id));
+      const danglingNeighbors: string[] = [];
+      const noEvidence: string[] = [];
+      const noCertificate: string[] = [];
+      for (const p of source.probes ?? []) {
+        for (const n of p.neighborLinks ?? []) {
+          if (!probeIds.has(n.probeId)) danglingNeighbors.push(`${p.id}→${n.probeId}`);
+        }
+        if (p.position && !p.position.evidenceRef) noEvidence.push(p.id);
+        if (!(p.certificates ?? []).length) noCertificate.push(p.id);
+      }
+      if (danglingNeighbors.length) {
+        addIssue(issues, 'registry_neighbor_missing', 'warn', '邻近探头关系指向登记册中不存在的探头', danglingNeighbors.join('、'));
+      }
+      if (noEvidence.length) {
+        addIssue(issues, 'registry_position_no_evidence', 'info', '探头登记了安装位置但缺少位置证据编号，偏差门控不会放行自动校正', noEvidence.join('、'));
+      }
+      if (noCertificate.length) {
+        addIssue(issues, 'registry_certificate_missing', 'info', '探头缺少校准证书，偏差门控不会放行自动校正', noCertificate.join('、'));
       }
     } else {
       const buildings = new Map<string, Building>();
@@ -451,6 +622,16 @@ export function parseSourceText(
         }
         const pid = get(row, 'probe_id');
         if (pid) {
+          const flatPosition = parsePosition({
+            floor: get(row, 'floor'),
+            height_m: get(row, 'height_m'),
+            orientation: get(row, 'orientation'),
+            wall_position: get(row, 'wall_position'),
+            room_type: get(row, 'room_type'),
+            exposure_note: get(row, 'exposure_note'),
+            evidence_ref: get(row, 'position_evidence_ref'),
+          });
+          const neighborId = get(row, 'neighbor_probe_id');
           probes.push({
             id: pid,
             buildingId: get(row, 'probe_building_id') || bid,
@@ -459,6 +640,22 @@ export function parseSourceText(
             installedAt: parseTimestamp(get(row, 'installed_at')) ?? 0,
             removedAt: parseTimestamp(get(row, 'removed_at')) ?? undefined,
             locationNote: get(row, 'location_note'),
+            position: flatPosition,
+            certificates: [],
+            lifecycleEvents: [],
+            neighborLinks: neighborId
+              ? [{
+                  probeId: neighborId,
+                  relation: normEnum(
+                    { same_building: 'same_building', same_floor: 'same_floor', adjacent_building: 'adjacent_building', same_riser: 'same_riser' },
+                    get(row, 'neighbor_relation'),
+                    'same_building',
+                  ),
+                  floorDelta: numOrNull(get(row, 'neighbor_floor_delta')),
+                  note: '',
+                  evidenceRef: '',
+                }]
+              : [],
           });
         }
       }

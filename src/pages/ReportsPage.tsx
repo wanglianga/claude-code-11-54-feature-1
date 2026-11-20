@@ -66,6 +66,19 @@ export function ReportsPage() {
     lines.push('## 规则参数');
     for (const [k, v] of Object.entries(run!.config)) lines.push(`- ${k}: ${v}`);
     lines.push('');
+    if (r.bias) {
+      lines.push('## 探头位置偏差与楼栋风险敏感性');
+      lines.push(`- 路线 A 门控通过段：${r.bias.routeAEligibleSegments}；调整视图生效段：${r.bias.routeAAdjustedSegments}；逐点邻近比较 ${r.bias.comparisonPointCount} 个。`);
+      lines.push(`- 路线 B 楼栋级适用 ${r.bias.routeBApplicableBuildingIds.length} 栋，池化适用 ${r.bias.routeBPooledBuildingIds.length} 栋；模型公式：${r.bias.modelSpec.formula}`);
+      for (const s of r.bias.buildingSensitivity) {
+        const name = r.buildingSummaries.find((b) => b.buildingId === s.buildingId)?.name ?? s.buildingId;
+        lines.push(
+          `- ${name}（${s.buildingId}）：原始 ${RISK_META[s.rawRisk].label}${s.rawRiskScore ?? ''} → 调整视图 ${RISK_META[s.adjustedRisk].label}${s.adjustedRiskScore ?? ''}；区间 ${RISK_META[s.rangeBound.lowerRisk].label} ~ ${RISK_META[s.rangeBound.upperRisk].label}；驱动探头 ${s.drivingProbeIds.join('、') || '无'}`,
+        );
+      }
+      lines.push('- 所有视图均保留原始读数；缺校准证书、安装位置证据或邻近覆盖不足的时段不自动校正。');
+      lines.push('');
+    }
     lines.push('## 局限与注意事项');
     for (const c of report!.narrative.caveats) lines.push(`- ${c}`);
     lines.push('');
@@ -83,9 +96,15 @@ export function ReportsPage() {
             <button
               className="btn"
               onClick={async () => {
-                await navigator.clipboard?.writeText(toMarkdown());
-                setCopied(true);
-                setTimeout(() => setCopied(false), 1800);
+                try {
+                  await navigator.clipboard?.writeText(toMarkdown());
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1800);
+                } catch {
+                  // Headless or permission-policy environments may block the clipboard;
+                  // the Markdown export button remains the guaranteed fallback.
+                  setCopied(false);
+                }
               }}
             >
               <ClipboardCheck size={14} />
@@ -187,6 +206,35 @@ export function ReportsPage() {
           </tbody>
         </table>
 
+        {r.bias && (
+          <>
+            <h2 style={{ fontSize: 15, marginTop: 26, marginBottom: 8 }}>探头位置偏差与楼栋风险敏感性</h2>
+            <div className="callout info" style={{ marginBottom: 10 }}>
+              <div className="tiny-2" style={{ lineHeight: 1.7 }}>
+                路线 A 门控通过 {r.bias.routeAEligibleSegments} 段、调整视图生效 {r.bias.routeAAdjustedSegments} 段，
+                共 {r.bias.comparisonPointCount} 个逐点邻近比较；路线 B 楼栋级适用 {r.bias.routeBApplicableBuildingIds.length} 栋、
+                池化适用 {r.bias.routeBPooledBuildingIds.length} 栋。所有视图保留原始读数；证据不足的时段不自动校正。
+              </div>
+            </div>
+            <table className="table">
+              <thead>
+                <tr><th>楼栋</th><th>原始视图</th><th>调整视图</th><th>不可区分区间</th><th>驱动探头</th></tr>
+              </thead>
+              <tbody>
+                {r.bias.buildingSensitivity.map((s) => (
+                  <tr key={s.buildingId}>
+                    <td className="tiny">{r.buildingSummaries.find((b) => b.buildingId === s.buildingId)?.name ?? s.buildingId}</td>
+                    <td><Chip tone={RISK_META[s.rawRisk].tone}>{RISK_META[s.rawRisk].label}{s.rawRiskScore !== null ? ` ${s.rawRiskScore}` : ''}</Chip></td>
+                    <td><Chip tone={RISK_META[s.adjustedRisk].tone}>{RISK_META[s.adjustedRisk].label}{s.adjustedRiskScore !== null ? ` ${s.adjustedRiskScore}` : ''}</Chip></td>
+                    <td className="tiny-2">{RISK_META[s.rangeBound.lowerRisk].label} ~ {RISK_META[s.rangeBound.upperRisk].label}</td>
+                    <td className="tiny-2 mono">{s.drivingProbeIds.join('、') || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
+
         <h2 style={{ fontSize: 15, marginTop: 26, marginBottom: 8 }}>规则参数（本次运行固定）</h2>
         <div className="report-rules">
           {([
@@ -212,8 +260,7 @@ export function ReportsPage() {
 
         <div className="grid c2" style={{ marginTop: 26 }}>
           <div>
-            <h2 style={{ fontSize: 15, marginBottom: 8 }}>输入与快照引用</h2>
-            <KV
+            <h2 style={{ fontSize: 15, marginBottom: 8 }}>输入与快照引用</h2>            <KV
               items={[
                 { k: '数据截止', v: dateTime(run.dataCutoffTs) },
                 { k: '运行时间', v: dateTime(run.createdAt) },
